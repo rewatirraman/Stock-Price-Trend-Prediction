@@ -56,6 +56,60 @@ def get_data_from_web(ticker):
         st.stop()
     return df
 
+def train_test_split(data, split_sz):
+    data_train = pd.DataFrame(data['Close'][0: int(len(data)*split_sz)])
+    data_test = pd.DataFrame(data['Close'][int(len(data)*split_sz): int(len(data))])
+
+    print("Size of complete data = ", data.shape)
+    print("Size of training data = ", data_train.shape)
+    print("Size of testing data = ", data_test.shape)
+
+    return data_train, data_test
+    
+def prepare_train_set(train_data, win_sz):
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    train_data_arr = scaler.fit_transform(train_data)
+    
+    train_data_dt = train_data.reset_index()["Date"]
+    train_x = []
+    train_y = []
+    train_t = []
+
+    for i in range(win_sz, len(train_data_arr)):
+        train_x.append(train_data_arr[i-win_sz : i, 0])
+        train_y.append(train_data_arr[i, 0])
+        train_t.append(train_data_dt[i])
+
+    train_x, train_y, train_t = np.array(train_x), np.array(train_y), np.array(train_t)
+    print("Shape of train feature set ", train_x.shape)
+    print("Shape of train target ", train_y.shape)
+    print("Shape of train timestamp ", train_t.shape)
+    
+    return train_x, train_y, train_t
+
+def prepare_test_set(past_n_days_data, test_data, win_sz):
+    test_data = pd.concat([past_n_days_data, test_data])
+
+    scaler = MinMaxScaler(feature_range=(0, 1))
+    test_data_arr = scaler.fit_transform(test_data)
+    
+    test_data_dt = test_data.reset_index()["Date"]
+    test_x = []
+    test_y = []
+    test_t = []
+
+    for i in range(win_sz, len(test_data_arr)):
+        test_x.append(test_data_arr[i-win_sz: i, 0])
+        test_y.append(test_data_arr[i, 0])
+        test_t.append(test_data_dt[i])
+
+    test_x, test_y, test_t = np.array(test_x), np.array(test_y), np.array(test_t)
+    print("Size of train dataset : ", test_x.shape)
+    print("Size of test dataset : ", test_y.shape)
+    print("Size of test timestamp : ", test_t.shape)
+
+    return test_x, test_y, test_t
+
 @dispatch(object, object, object)
 def plot(data1, d1_label, title=""):
     fig = plt.figure(figsize=(25, 8))
@@ -280,10 +334,10 @@ if DEBUG:
     st.write(data.tail())
 
 win_size = 5 # Based on experiment on different window size, 5 seems to be the best.
-data_train, data_test = app.train_test_split(data, split_sz= 0.8)
-train_x, train_y, train_t = app.prepare_train_set(data_train, win_size)
+data_train, data_test = train_test_split(data, split_sz= 0.8)
+train_x, train_y, train_t = prepare_train_set(data_train, win_size)
 past_n_days_data = data_train.tail(win_size)
-test_x, test_y, test_t = app.prepare_test_set(past_n_days_data, data_test, win_size)
+test_x, test_y, test_t = prepare_test_set(past_n_days_data, data_test, win_size)
 
 if DEBUG:
     st.write("Size of raw data : ", data.shape)

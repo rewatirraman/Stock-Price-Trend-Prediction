@@ -38,7 +38,6 @@ import numpy as np
 import pandas as pd
 import pickle
 import os
-import app
 
 DEBUG = False
 st.set_page_config(layout="wide")
